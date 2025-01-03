@@ -25,6 +25,8 @@ class _MusicPlayerState extends State<MusicPlayer> {
   String currentSong = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
   Duration _duration = Duration();
   Duration _position = Duration();
+  Duration _dragValue = Duration();
+  bool _dragging = false;
 
   @override
   void initState() {
@@ -50,7 +52,12 @@ class _MusicPlayerState extends State<MusicPlayer> {
     });
 
     _audioPlayer.onAudioPositionChanged.listen((Duration p) {
-      setState(() => _position = p);
+      if (!_dragging) {
+        setState(() {
+          _position = p;
+          _dragValue = p;
+        });
+      }
     });
   }
 
@@ -81,6 +88,10 @@ class _MusicPlayerState extends State<MusicPlayer> {
   void _seekToSecond(int second) {
     Duration newDuration = Duration(seconds: second);
     _audioPlayer.seek(newDuration);
+    // 立即更新位置，避免跳动
+    setState(() {
+      _position = newDuration;
+    });
   }
 
   String _formatDuration(Duration duration) {
@@ -117,13 +128,18 @@ class _MusicPlayerState extends State<MusicPlayer> {
           Slider(
             activeColor: Colors.redAccent,
             inactiveColor: Colors.grey,
-            value: _position.inSeconds.toDouble(),
+            value: _dragging ? _dragValue.inSeconds.toDouble() : _position.inSeconds.toDouble(),
             min: 0.0,
             max: _duration.inSeconds.toDouble(),
             onChanged: (double value) {
               setState(() {
-                _seekToSecond(value.toInt());
+                _dragging = true;
+                _dragValue = Duration(seconds: value.toInt());
               });
+            },
+            onChangeEnd: (double value) {
+              _dragging = false;  // 先更新拖动状态
+              _seekToSecond(value.toInt());  // 然后更新位置
             },
           ),
           Padding(
