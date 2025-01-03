@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'dart:math';
 
 void main() {
   runApp(MyApp());
@@ -20,9 +21,10 @@ class MusicPlayer extends StatefulWidget {
 }
 
 class _MusicPlayerState extends State<MusicPlayer> {
-  AudioPlayer _audioPlayer = AudioPlayer();
+  final AudioPlayer _audioPlayer = AudioPlayer();
   bool isPlaying = false;
-  String currentSong = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+  String currentSong =
+      "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
   Duration _duration = Duration();
   Duration _position = Duration();
   Duration _dragValue = Duration();
@@ -31,18 +33,14 @@ class _MusicPlayerState extends State<MusicPlayer> {
   @override
   void initState() {
     super.initState();
-    
-    // 预先加载音频
-    _audioPlayer.setUrl(currentSong).then((_) {
-      // 此时会触发 onDurationChanged 事件
-    });
 
-    // 使用 onPlayerStateChanged 监听播放状态
+    _audioPlayer.setUrl(currentSong).then((_) {});
+
     _audioPlayer.onPlayerStateChanged.listen((PlayerState state) {
       if (state == PlayerState.COMPLETED) {
         setState(() {
           isPlaying = false;
-          _position = Duration.zero;  // 重置播放位置到开始
+          _position = Duration.zero;
         });
       }
     });
@@ -55,7 +53,6 @@ class _MusicPlayerState extends State<MusicPlayer> {
       if (!_dragging) {
         setState(() {
           _position = p;
-          _dragValue = p;
         });
       }
     });
@@ -71,27 +68,19 @@ class _MusicPlayerState extends State<MusicPlayer> {
     if (isPlaying) {
       await _audioPlayer.pause();
     } else {
-      // 如果是从头开始播放
       if (_position.inSeconds == 0) {
         await _audioPlayer.play(currentSong);
       } else {
-        // 从暂停位置继续播放
         await _audioPlayer.resume();
       }
     }
-    
-    setState(() {
-      isPlaying = !isPlaying;
-    });
+    setState(() => isPlaying = !isPlaying);
   }
 
   void _seekToSecond(int second) {
     Duration newDuration = Duration(seconds: second);
     _audioPlayer.seek(newDuration);
-    // 立即更新位置，避免跳动
-    setState(() {
-      _position = newDuration;
-    });
+    setState(() => _position = newDuration);
   }
 
   String _formatDuration(Duration duration) {
@@ -107,40 +96,81 @@ class _MusicPlayerState extends State<MusicPlayer> {
       appBar: AppBar(
         title: Text('音乐播放器'),
         backgroundColor: Colors.redAccent,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.search),
+            onPressed: () {
+              // 搜索功能
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.more_vert),
+            onPressed: () {
+              // 更多选项
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [
-          Container(
-            height: 300,
-            decoration: BoxDecoration(
-              image: DecorationImage(
-                image: NetworkImage('https://via.placeholder.com/300'),
-                fit: BoxFit.cover,
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 200,
+                    height: 200,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      image: DecorationImage(
+                        image: NetworkImage('https://picsum.photos/200'),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 20),
+                  Text(
+                    '当前歌曲',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    '艺术家',
+                    style: TextStyle(fontSize: 18, color: Colors.grey),
+                  ),
+                ],
               ),
             ),
           ),
-          SizedBox(height: 20),
-          Text(
-            '当前歌曲',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 20),
           Slider(
             activeColor: Colors.redAccent,
             inactiveColor: Colors.grey,
-            value: _dragging ? _dragValue.inSeconds.toDouble() : _position.inSeconds.toDouble(),
+            value: _dragging
+                ? _dragValue.inSeconds.toDouble()
+                : min(_position.inSeconds.toDouble(),
+                    _duration.inSeconds.toDouble()),
             min: 0.0,
-            max: _duration.inSeconds.toDouble(),
-            onChanged: (double value) {
-              setState(() {
-                _dragging = true;
-                _dragValue = Duration(seconds: value.toInt());
-              });
-            },
-            onChangeEnd: (double value) {
-              _dragging = false;  // 先更新拖动状态
-              _seekToSecond(value.toInt());  // 然后更新位置
-            },
+            max: _duration.inSeconds.toDouble() > 0
+                ? _duration.inSeconds.toDouble()
+                : 1.0,
+            onChanged: _duration.inSeconds > 0
+                ? (double value) {
+                    setState(() {
+                      _dragging = true;
+                      _dragValue = Duration(seconds: value.toInt());
+                    });
+                  }
+                : null,
+            onChangeEnd: _duration.inSeconds > 0
+                ? (double value) {
+                    setState(() {
+                      _dragging = false;
+                      _position = Duration(seconds: value.toInt());
+                    });
+                    _seekToSecond(value.toInt());
+                  }
+                : null,
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -164,7 +194,7 @@ class _MusicPlayerState extends State<MusicPlayer> {
               ),
               IconButton(
                 icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
-                iconSize: 36,
+                iconSize: 48,
                 onPressed: _playPause,
               ),
               IconButton(
@@ -176,6 +206,7 @@ class _MusicPlayerState extends State<MusicPlayer> {
               ),
             ],
           ),
+          SizedBox(height: 20),
         ],
       ),
     );
