@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:audioplayers/audioplayers.dart';
 import 'page/homePage.dart';
 import 'page/LivePage.dart';
 import 'page/RadarPage.dart';
@@ -28,13 +27,7 @@ class MusicPlayer extends StatefulWidget {
 
 class _MusicPlayerState extends State<MusicPlayer>
     with SingleTickerProviderStateMixin {
-  final AudioPlayer _audioPlayer = AudioPlayer();
-  bool isPlaying = false;
-  String currentSong =
-      "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
-
   int _currentIndex = 0;
-
   late TabController _tabController;
 
   @override
@@ -45,7 +38,6 @@ class _MusicPlayerState extends State<MusicPlayer>
 
   @override
   void dispose() {
-    _audioPlayer.dispose();
     _tabController.dispose();
     super.dispose();
   }
@@ -135,31 +127,3 @@ class _MusicPlayerState extends State<MusicPlayer>
     );
   }
 }
-
-// class LivePage extends StatelessWidget {
-//   @override
-//   Widget build(BuildContext context) {
-//     return Center(child: Text('直播内容'));
-//   }
-// }
-
-// class RadarPage extends StatelessWidget {
-//   @override
-//   Widget build(BuildContext context) {
-//     return Center(child: Text('雷达内容'));
-//   }
-// }
-
-// class GamesPage extends StatelessWidget {
-//   @override
-//   Widget build(BuildContext context) {
-//     return Center(child: Text('玩乐内容'));
-//   }
-// }
-
-// class ProfilePage extends StatelessWidget {
-//   @override
-//   Widget build(BuildContext context) {
-//     return Center(child: Text('我的内容'));
-//   }
-// }
