@@ -27,13 +27,12 @@ class StockChart extends StatefulWidget {
 class _StockChartState extends State<StockChart> {
   List<Map<String, dynamic>> stockData = [];
   bool isLoading = true;
-  late ChartInfo chartInfo;
+  ChartInfo? chartInfo; // 声明为可空类型
 
   @override
   void initState() {
     super.initState();
-    fetchStockData();
-    fetchChartInfo();
+    fetchData();
   }
 
   Future<void> fetchStockData() async {
@@ -58,16 +57,33 @@ class _StockChartState extends State<StockChart> {
   }
 
   Future<void> fetchChartInfo() async {
-    final response =
-        await http.get(Uri.parse('http://localhost:8080/chartinfo'));
+    try {
+      final response = await http
+          .get(Uri.parse('http://localhost:8080/chartinfo'))
+          .timeout(Duration(seconds: 10));
 
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> jsonData = json.decode(response.body);
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonData = json.decode(response.body);
+        setState(() {
+          chartInfo = ChartInfo.fromJson(jsonData);
+        });
+      } else {
+        throw Exception('Failed to load chart info: ${response.statusCode}');
+      }
+    } catch (e) {
       setState(() {
-        chartInfo = ChartInfo.fromJson(jsonData);
+        isLoading = false;
       });
-    } else {
-      throw Exception('Failed to load chart info');
+      print('Error fetching chart info: $e');
+    }
+  }
+
+  Future<void> fetchData() async {
+    try {
+      await Future.wait([fetchStockData(), fetchChartInfo()]);
+    } catch (e) {
+      setState(() => isLoading = false);
+      print('Error: $e');
     }
   }
 
@@ -79,7 +95,7 @@ class _StockChartState extends State<StockChart> {
         majorGridLines: MajorGridLines(width: 0),
       ),
       primaryYAxis: NumericAxis(
-        title: AxisTitle(text: chartInfo.title),
+        title: AxisTitle(text: chartInfo!.title),
         majorGridLines: MajorGridLines(width: 1, color: Colors.grey[300]),
       ),
       plotAreaBorderWidth: 0,
@@ -87,7 +103,7 @@ class _StockChartState extends State<StockChart> {
         CartesianChartAnnotation(
           widget: Container(
             child: Text(
-              chartInfo.bullMarketLine,
+              chartInfo!.bullMarketLine,
               style: TextStyle(color: Colors.green, fontSize: 12),
             ),
           ),
@@ -98,7 +114,7 @@ class _StockChartState extends State<StockChart> {
         CartesianChartAnnotation(
           widget: Container(
             child: Text(
-              chartInfo.shockMarketLine,
+              chartInfo!.shockMarketLine,
               style: TextStyle(color: Colors.orange, fontSize: 12),
             ),
           ),
@@ -114,7 +130,7 @@ class _StockChartState extends State<StockChart> {
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
-              chartInfo.description,
+              chartInfo!.description,
               style: TextStyle(color: Colors.blue, fontSize: 12),
             ),
           ),
@@ -183,15 +199,19 @@ class ChartInfo {
   final String shockMarketLine;
   final String description;
 
-  ChartInfo(
-      this.title, this.bullMarketLine, this.shockMarketLine, this.description);
+  ChartInfo({
+    required this.title,
+    required this.bullMarketLine,
+    required this.shockMarketLine,
+    required this.description,
+  });
 
   factory ChartInfo.fromJson(Map<String, dynamic> json) {
     return ChartInfo(
-      json['title'],
-      json['bullMarketLine'],
-      json['shockMarketLine'],
-      json['description'],
+      title: json['title'],
+      bullMarketLine: json['bullMarketLine'],
+      shockMarketLine: json['shockMarketLine'],
+      description: json['description'],
     );
   }
 }
